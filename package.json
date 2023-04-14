@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/ronandalton/an-io-game#readme",
   "dependencies": {
-    "express": "^4.18.2"
-  }
+    "express": "^4.18.2",
+    "ws": "^8.13.0"
+  },
+  "type": "module"
 }

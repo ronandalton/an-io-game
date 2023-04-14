@@ -25,29 +25,7 @@ let targetX = 50;
 let targetY = 50;
 
 
-function moveCellTowardsTarget(cell, targetX, targetY, moveDistance) {
-	const dx = targetX - cell.x;
-	const dy = targetY - cell.y;
-
-	const dist = Math.sqrt(dx * dx + dy * dy);
-
-	if (dist < moveDistance) {
-		cell.x = targetX;
-		cell.y = targetY;
-		return;
-	}
-
-	const dxNorm = dx / dist;
-	const dyNorm = dy / dist;
-
-	cell.x += dxNorm * moveDistance;
-	cell.y += dyNorm * moveDistance;
-}
-
-
 function draw() {
-	moveCellTowardsTarget(playerCell, targetX, targetY, 4);
-
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	drawCell(playerCell);
 }
@@ -74,3 +52,37 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 setInterval(draw, 1000 / 100);
+
+
+const webSocket = new WebSocket("ws://localhost:4000");
+
+
+function sendTargetPosition() {
+	const message = {
+		type: "targetPositionUpdate",
+		targetX: targetX,
+		targetY: targetY
+	};
+
+	webSocket.send(JSON.stringify(message));
+}
+
+
+webSocket.onopen = (event) => {
+	setInterval(sendTargetPosition, 40);
+};
+
+
+webSocket.onmessage = (event) => {
+	console.log(event.data);
+
+	const message = JSON.parse(event.data);
+
+	switch (message.type) {
+		case "cellUpdate":
+			playerCell.x = message.cellX;
+			playerCell.y = message.cellY;
+			break;
+	}
+}
+
