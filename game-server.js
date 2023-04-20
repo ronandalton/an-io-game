@@ -86,34 +86,6 @@ function registerNewClient(connection) {
 }
 
 
-function spawnPlayer() {
-	const playerId = getUnusedPlayerId();
-
-	if (playerId === null) {
-		return null; // can't spawn player because server is full
-	}
-
-	const cellId = generateGameObjectId();
-	const position = getRandomPosition();
-	const cell = new Cell(cellId, position);
-	cells.set(cellId, cell);
-
-	const player = new Player(playerId, cellId, null);
-	players.set(playerId, player);
-
-	return player;
-}
-
-
-function getUnusedPlayerId() {
-	if (availablePlayerIds.length > 0) {
-		return availablePlayerIds.pop();
-	} else {
-		return null;
-	}
-}
-
-
 function handleWebsocketMessage(connection, data) {
 	try {
 		const message = JSON.parse(data);
@@ -153,6 +125,34 @@ function handleJoinGameRequestMessage(connection, message) {
 }
 
 
+function spawnPlayer() {
+	const playerId = getUnusedPlayerId();
+
+	if (playerId === null) {
+		return null; // can't spawn player because server is full
+	}
+
+	const cellId = generateGameObjectId();
+	const position = getRandomPosition();
+	const cell = new Cell(cellId, position);
+	cells.set(cellId, cell);
+
+	const player = new Player(playerId, cellId, null);
+	players.set(playerId, player);
+
+	return player;
+}
+
+
+function getUnusedPlayerId() {
+	if (availablePlayerIds.length > 0) {
+		return availablePlayerIds.pop();
+	} else {
+		return null;
+	}
+}
+
+
 function handleTargetPositionUpdateMessage(connection, message) {
 	const playerId = clientStates.get(connection.clientId).playerId;
 
@@ -176,6 +176,12 @@ function sendJoinGameResponseMessage(connection, joinSuccessful) {
 	};
 
 	connection.send(JSON.stringify(message));
+}
+
+
+function tick() {
+	updateGameState();
+	sendUpdatedGameStateToClients();
 }
 
 
@@ -210,16 +216,6 @@ function moveCellTowardsTargetPosition(cell, targetPosition, moveDistance) {
 }
 
 
-function constructClientGameUpdateMessage(clientId) {
-	const message = {
-		type: "gameUpdate",
-		cells: Array.from(cells.values())
-	};
-
-	return message;
-}
-
-
 function sendUpdatedGameStateToClients() {
 	websocketServer.clients.forEach((connection) => {
 		const message = constructClientGameUpdateMessage(connection.clientId);
@@ -228,9 +224,13 @@ function sendUpdatedGameStateToClients() {
 }
 
 
-function tick() {
-	updateGameState();
-	sendUpdatedGameStateToClients();
+function constructClientGameUpdateMessage(clientId) {
+	const message = {
+		type: "gameUpdate",
+		cells: Array.from(cells.values())
+	};
+
+	return message;
 }
 
 
