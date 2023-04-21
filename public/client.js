@@ -1,10 +1,13 @@
 const SERVER_ADDRESS = "ws://localhost:4000";
 const DRAW_RATE = 60; // FPS
+const CAMERA_VIEW_AREA_HEIGHT_TO_WIDTH_RATIO = 1080 / 1920;
 const SERVER_TICK_PERIOD = 40; // in milliseconds
 const EXPECTED_UPDATE_DELAY_VARIANCE = 20; // in milliseconds, larger = more delay but less jittery
 const LERP_PERIOD_FLEXIBILITY = 0.2; // 0-1, lower = more stable movement speed but less adaptive to network jitter
-const CELL_RADIUS = 50;
+const CELL_RADIUS = 100;
 const CELL_COLOR = "#0095DD";
+const GRID_LINE_COLOR = "#AAAAAA";
+const GRID_LINE_SPACING = 100;
 
 
 const canvas = document.getElementById("gameArea");
@@ -13,7 +16,7 @@ const ctx = canvas.getContext("2d");
 
 let webSocket = null;
 let playerId = null;
-let playerTarget = null;
+let playerTarget = null; // in screen space
 let gameStateBuffer = null;
 let currentGameState = null;
 
@@ -43,8 +46,17 @@ class Player {
 }
 
 
+class Camera {
+	constructor(position, viewAreaWidth) {
+		this.position = position;
+		this.viewAreaWidth = viewAreaWidth;
+	}
+}
+
+
 class GameState {
-	constructor(cells = new Map()) {
+	constructor(camera = new Camera(), cells = new Map()) {
+		this.camera = camera;
 		this.cells = cells; // map with key: cellId
 	}
 };
@@ -60,7 +72,6 @@ class GameStateBufferEntry {
 
 
 function init() {
-	currentGameState = new GameState();
 	gameStateBuffer = [];
 
 	initCanvas();
@@ -87,12 +98,91 @@ function draw() {
 	updateCurrentGameState();
 
 	clearScreen();
-	drawCells();
+
+	if (currentGameState !== null) {
+		drawGrid();
+		drawCells();
+	}
 }
 
 
 function clearScreen() {
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+
+function drawGrid() {
+	drawHorizontalGridLines();
+	drawVerticalGridLines();
+}
+
+
+function drawHorizontalGridLines() {
+	const topScreenBoundaryGameSpaceYValue = screenSpaceYToGameSpace(0);
+	const bottomScreenBoundaryGameSpaceYValue = screenSpaceYToGameSpace(canvas.height - 1);
+
+	const yPositionValuesOfGridLines = getGridLineCoordsBetween(
+		topScreenBoundaryGameSpaceYValue, bottomScreenBoundaryGameSpaceYValue);
+
+	for (const lineYPosition of yPositionValuesOfGridLines) {
+		const distanceAcrossScreen = gameSpaceYToScreenSpace(lineYPosition);
+		drawGridLine(distanceAcrossScreen, false);
+	}
+}
+
+
+function drawVerticalGridLines() {
+	const leftScreenBoundaryGameSpaceXValue = screenSpaceXToGameSpace(0);
+	const rightScreenBoundaryGameSpaceXValue = screenSpaceXToGameSpace(canvas.width - 1);
+
+	const xPositionValuesOfGridLines = getGridLineCoordsBetween(
+		leftScreenBoundaryGameSpaceXValue, rightScreenBoundaryGameSpaceXValue);
+
+	for (const lineXPosition of xPositionValuesOfGridLines) {
+		const distanceAcrossScreen = gameSpaceXToScreenSpace(lineXPosition);
+		drawGridLine(distanceAcrossScreen, true);
+	}
+}
+
+
+function getGridLineCoordsBetween(gameSpaceCoord1, gameSpaceCoord2) {
+	// note that "coord" refers to a singe axis value such as x or y,
+	// as opposed to position that refers to the combination of x and y
+
+	const coords = [];
+
+	const lowerBound = Math.min(gameSpaceCoord1, gameSpaceCoord2);
+	const upperBound = Math.max(gameSpaceCoord1, gameSpaceCoord2);
+
+	let lineNum = Math.ceil(lowerBound / GRID_LINE_SPACING);
+
+	let coord;
+	while ((coord = lineNum * GRID_LINE_SPACING) <= upperBound) {
+		coords.push(coord);
+		lineNum++;
+	}
+
+	return coords;
+}
+
+
+function drawGridLine(distanceAcrossScreen, isVertical) {
+	let lineStartPos;
+	let lineEndPos;
+
+	if (isVertical) {
+		lineStartPos = new Position(distanceAcrossScreen, 0);
+		lineEndPos = new Position(distanceAcrossScreen, canvas.height - 1);
+	} else {
+		lineStartPos = new Position(0, distanceAcrossScreen);
+		lineEndPos = new Position(canvas.width - 1, distanceAcrossScreen);
+	}
+
+	ctx.beginPath();
+	ctx.moveTo(lineStartPos.x, lineStartPos.y);
+	ctx.lineTo(lineEndPos.x, lineEndPos.y);
+	ctx.strokeStyle = GRID_LINE_COLOR;
+	ctx.stroke();
 }
 
 
@@ -106,11 +196,52 @@ function drawCells() {
 
 
 function drawCell(cell) {
+	const screenPos = gameSpaceToScreenSpace(cell.position);
+	const radius = CELL_RADIUS * getGameSpaceToScreenSpaceScalingFactor();
+
 	ctx.beginPath();
-	ctx.arc(cell.position.x, cell.position.y, CELL_RADIUS, 0, Math.PI * 2);
+	ctx.arc(screenPos.x, screenPos.y, radius, 0, Math.PI * 2);
 	ctx.fillStyle = CELL_COLOR;
 	ctx.fill();
 }
+
+
+function screenSpaceToGameSpace(position) {
+	const scalingFactor = getGameSpaceToScreenSpaceScalingFactor();
+	const cameraPos = currentGameState.camera.position;
+	const screenCenter = new Position(canvas.width / 2, canvas.height / 2);
+
+	return new Position(
+		(position.x - screenCenter.x) / scalingFactor + cameraPos.x,
+		(position.y - screenCenter.y) / scalingFactor + cameraPos.y
+	);
+}
+
+
+function gameSpaceToScreenSpace(position) {
+	const scalingFactor = getGameSpaceToScreenSpaceScalingFactor();
+	const cameraPos = currentGameState.camera.position;
+	const screenCenter = new Position(canvas.width / 2, canvas.height / 2);
+
+	return new Position(
+		(position.x - cameraPos.x) * scalingFactor + screenCenter.x,
+		(position.y - cameraPos.y) * scalingFactor + screenCenter.y
+	);
+}
+
+
+function getGameSpaceToScreenSpaceScalingFactor() {
+	const viewAreaWidth = currentGameState.camera.viewAreaWidth;
+	const viewAreaHeight = viewAreaWidth * CAMERA_VIEW_AREA_HEIGHT_TO_WIDTH_RATIO;
+
+	return Math.max(canvas.width / viewAreaWidth, canvas.height / viewAreaHeight);
+}
+
+
+function screenSpaceXToGameSpace(x) { return screenSpaceToGameSpace(new Position(x, 0)).x; }
+function screenSpaceYToGameSpace(y) { return screenSpaceToGameSpace(new Position(0, y)).y; }
+function gameSpaceXToScreenSpace(x) { return gameSpaceToScreenSpace(new Position(x, 0)).x; }
+function gameSpaceYToScreenSpace(y) { return gameSpaceToScreenSpace(new Position(0, y)).y; }
 
 
 function updateCurrentGameState() {
@@ -138,9 +269,18 @@ function removeOldStatesFromGameStateBuffer(currentTime) {
 
 
 function lerpGameStates(state1, state2, t) {
+	const lerpedCamera = lerpCamera(state1.camera, state2.camera, t);
 	const lerpedCells = lerpObjectMapsOfSameType(state1.cells, state2.cells, t, lerpCell);
 
-	return new GameState(lerpedCells);
+	return new GameState(lerpedCamera, lerpedCells);
+}
+
+
+function lerpCamera(camera1, camera2, t) {
+	const lerpedPosition = lerpPosition(camera1.position, camera2.position, t);
+	const lerpedViewAreaWidth = lerp(camera1.viewAreaWidth, camera2.viewAreaWidth, t);
+
+	return new Camera(lerpedPosition, lerpedViewAreaWidth);
 }
 
 
@@ -205,9 +345,13 @@ function sendJoinGameRequest() {
 
 
 function sendTargetPosition() {
+	if (playerTarget === null || currentGameState === null) {
+		return;
+	}
+
 	const message = {
 		type: "targetPositionUpdate",
-		position: playerTarget
+		position: screenSpaceToGameSpace(playerTarget)
 	};
 
 	webSocket.send(JSON.stringify(message));
@@ -238,13 +382,14 @@ function handleJoinGameResponseMessage(message) {
 
 
 function handleGameUpdateMessage(message) {
-	const cells = new Map();
+	const camera = message.camera;
 
+	const cells = new Map();
 	for (const cell of message.cells) {
 		cells.set(cell.id, cell);
 	}
 
-	const newGameState = new GameState(cells);
+	const newGameState = new GameState(camera, cells);
 
 	addGameStateToBuffer(newGameState);
 }

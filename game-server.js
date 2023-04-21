@@ -3,10 +3,12 @@ import {WebSocketServer} from 'ws';
 
 const SERVER_PORT = 4000;
 const MAX_PLAYERS = 200;
-const GAME_AREA_WIDTH = 500;
-const GAME_AREA_HEIGHT = 400;
+const PLAY_AREA_WIDTH = 500;
+const PLAY_AREA_HEIGHT = 400;
 const SERVER_TICK_PERIOD = 40; // in milliseconds
 const CELL_MOVEMENT_SPEED = 20;
+const CAMERA_START_VIEW_AREA_WIDTH = 3000;
+const CAMERA_VIEW_AREA_HEIGHT_TO_WIDTH_RATIO = 1080 / 1920;
 
 
 let websocketServer = null;
@@ -45,9 +47,18 @@ class Player {
 }
 
 
+class Camera {
+	constructor(position, viewAreaWidth) {
+		this.position = position;
+		this.viewAreaWidth = viewAreaWidth;
+	}
+}
+
+
 class ClientState {
-	constructor(clientId) {
+	constructor(clientId, camera) {
 		this.clientId = clientId;
+		this.camera = camera;
 		this.playerId = null; // null if dead or spectating
 	}
 }
@@ -78,11 +89,20 @@ function handleNewConnection(connection) {
 
 function registerNewClient(connection) {
 	const clientId = generateClientId();
+	const camera = createCameraForNewClient();
 
-	const clientState = new ClientState(clientId);
+	const clientState = new ClientState(clientId, camera);
 	clientStates.set(clientId, clientState);
 
 	connection.clientId = clientId;
+}
+
+
+function createCameraForNewClient() {
+	const position = new Position(PLAY_AREA_WIDTH / 2, PLAY_AREA_HEIGHT / 2);
+	const viewAreaWidth = CAMERA_START_VIEW_AREA_WIDTH;
+
+	return new Camera(position, viewAreaWidth);
 }
 
 
@@ -181,6 +201,7 @@ function sendJoinGameResponseMessage(connection, joinSuccessful) {
 
 function tick() {
 	updateGameState();
+	updateClientStates();
 	sendUpdatedGameStateToClients();
 }
 
@@ -216,6 +237,22 @@ function moveCellTowardsTargetPosition(cell, targetPosition, moveDistance) {
 }
 
 
+function updateClientStates() {
+	for (const clientState of clientStates.values()) {
+		updateCameraForClient(clientState);
+	}
+}
+
+
+function updateCameraForClient(clientState) {
+	if (clientState.playerId !== null) {
+		const player = players.get(clientState.playerId);
+		const cell = cells.get(player.cellId);
+		clientState.camera.position = structuredClone(cell.position);
+	}
+}
+
+
 function sendUpdatedGameStateToClients() {
 	websocketServer.clients.forEach((connection) => {
 		const message = constructClientGameUpdateMessage(connection.clientId);
@@ -225,8 +262,11 @@ function sendUpdatedGameStateToClients() {
 
 
 function constructClientGameUpdateMessage(clientId) {
+	const clientState = clientStates.get(clientId)
+
 	const message = {
 		type: "gameUpdate",
+		camera: clientState.camera,
 		cells: Array.from(cells.values())
 	};
 
@@ -245,8 +285,8 @@ function generateGameObjectId() {
 
 
 function getRandomPosition() {
-	const x = getRandomInt(0, GAME_AREA_WIDTH);
-	const y = getRandomInt(0, GAME_AREA_HEIGHT);
+	const x = getRandomInt(0, PLAY_AREA_WIDTH);
+	const y = getRandomInt(0, PLAY_AREA_HEIGHT);
 
 	return new Position(x, y);
 }
