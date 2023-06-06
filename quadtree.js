@@ -1,19 +1,12 @@
-class CircularObject {
-	constructor(x, y, radius) {
-		this.x = x;
-		this.y = y;
-		this.radius = radius;
-	}
-}
-
-
 /**
  * Manages a large collection of circular objects arranged in 2D space.
  * A circular object defines x, y, radius and id.
  * An efficient procedure to retrieve objects intersecting a given object is provided.
  *
- * IMPORTANT: Be careful not to modify objects while they are stored in the collection.
- * Remove the object first, then update it and reinsert.
+ * Note that objects cannot be modified while they are in the collection.
+ * To update the properties of an object, it must be added again.
+ * All objects stored in this collection are copies, so an object retrieved from
+ * the collection will not compare equal to the object that was initially added.
  *
  * The position of objects should generally be within the map bounds. However, this
  * implementation should be able to handle points that aren't within the bounds or
@@ -35,26 +28,47 @@ class CircularObjectMap {
 		const extentX = width / 2;
 		const extentY = height / 2;
 
-		this.quadTree = new QuadTree(centerX, centerY, extentX, extentY);
+		this._objects = new Map(); // key: id
+		this._quadTree = new QuadTree(centerX, centerY, extentX, extentY);
+	}
+	
+	/**
+	 * Retrieves the object with the given id from the collection.
+	 * 
+	 * @param id This id of the object to get.
+	 * @returns A copy of the object if found, otherwise null.
+	 */
+	get(id) {
+		return structuredClone(this._objects.get(id) || null);
 	}
 
 	/**
 	 * Adds the given object to the collection.
+	 * If an object with the same id is already in the collection,
+	 * it is updated to match the properties of the new object.
 	 *
 	 * @param object A circular object that defines x, y, radius and id.
 	 */
 	add(object) {
-		this.quadTree.insert(object);
+		this.remove(object.id);
+		
+		const objectCopy = structuredClone(object);
+		
+		this._objects.set(object.id, objectCopy);
+		this._quadTree.insert(objectCopy);
 	}
 
 	/**
-	 * Removes the given object from the collection.
+	 * Removes the object with the given id from the collection.
 	 * If the object cannot be found, nothing will be removed.
 	 *
-	 * @param object A circular object that defines x, y, radius and id.
+	 * @param id The id of the object to remove.
 	 */
-	remove(object) {
-		this.quadTree.remove(object);
+	remove(id) {
+		if (this._objects.has(id)) {
+			this._quadTree.remove(this._objects.get(id));
+			this._objects.delete(id);
+		}
 	}
 
 	/**
@@ -64,22 +78,22 @@ class CircularObjectMap {
 	 * any object intersections being missed or counted twice.
 	 *
 	 * @param object A circular object that defines x, y, radius and id.
-	 * This object should already be in the collection.
+	 * This object doesn't have to be in the collection.
 	 * @return A list of objects in the collection which intersect the given object.
 	 */
 	findSmallerObjectsIntersecting(object) {
 		const objectsFound = [];
 
-		const candidates = this.quadTree.findObjectsInCenteredRect(
+		const candidates = this._quadTree.findObjectsInCenteredRect(
 			object.x, object.y, object.radius * 2, object.radius * 2);
 
 		for (const candidate of candidates) {
-			if (candidate !== object) {
+			if (candidate.id !== object.id) {
 				if (circlesIntersect(candidate.x, candidate.y, candidate.radius,
 						object.x, object.y, object.radius)) {
 					if (candidate.radius < object.radius || (candidate.radius === object.radius
 							&& candidate.id < object.id)) {
-						objectsFound.push(candidate);
+						objectsFound.push(structuredClone(candidate));
 					}
 				}
 			}
@@ -97,6 +111,8 @@ const QUAD_TREE_MAX_DEPTH = 3;
 /**
  * Manages a collection of points on a 2D plane.
  * Each point is an object that must define x and y.
+ * The position of an object must not be changed without
+ * first removing and then reinserting it.
  */
 class QuadTree {
 	constructor(centerX, centerY, extentX, extentY, depth = 0) {
@@ -248,4 +264,4 @@ function circlesIntersect(x1, y1, r1, x2, y2, r2) {
 }
 
 
-export {CircularObject, CircularObjectMap};
+export {CircularObjectMap};
