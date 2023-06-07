@@ -1,4 +1,5 @@
 import {WebSocketServer} from 'ws';
+import {CircularObjectMap} from './circular-object-map.js'
 
 
 const SERVER_PORT = 4000;
@@ -7,14 +8,16 @@ const PLAY_AREA_WIDTH = 500;
 const PLAY_AREA_HEIGHT = 400;
 const SERVER_TICK_PERIOD = 40; // in milliseconds
 const CELL_MOVEMENT_SPEED = 20;
-const CAMERA_START_VIEW_AREA_WIDTH = 3000;
+const CAMERA_START_VIEW_AREA_WIDTH = 2000;
 const CAMERA_VIEW_AREA_HEIGHT_TO_WIDTH_RATIO = 1080 / 1920;
+const PLAYER_STARTING_MASS = 100;
+const MASS_TO_AREA_MULTIPLIER = 200;
 
 
 let websocketServer = null;
 const clientStates = new Map(); // key: clientId (all client data except player specific data)
 const players = new Map(); // key: playerId
-const cells = new Map(); // key: cellId
+const cells = new CircularObjectMap();
 const availablePlayerIds = [];
 
 for (let i = MAX_PLAYERS - 1; i >= 0; i--) {
@@ -31,9 +34,22 @@ class Position {
 
 
 class Cell {
-	constructor(id, position) {
+	constructor(id, position, mass) {
 		this.id = id;
 		this.position = position;
+		this.mass = mass;
+	}
+	
+	get x() {
+		return position.x;
+	}
+	
+	get y() {
+		return position.y;
+	}
+	
+	get radius() {
+		return Math.sqrt(this.mass * MASS_TO_AREA_MULTIPLIER / Math.PI);
 	}
 }
 
@@ -154,8 +170,8 @@ function spawnPlayer() {
 
 	const cellId = generateGameObjectId();
 	const position = getRandomPosition();
-	const cell = new Cell(cellId, position);
-	cells.set(cellId, cell);
+	const cell = new Cell(cellId, position, PLAYER_STARTING_MASS);
+	cells.add(cell);
 
 	const player = new Player(playerId, cellId, null);
 	players.set(playerId, player);
@@ -212,6 +228,7 @@ function updateGameState() {
 
 		if (player.targetPosition !== null) {
 			moveCellTowardsTargetPosition(playerCell, player.targetPosition, CELL_MOVEMENT_SPEED);
+			cells.add(playerCell);
 		}
 	}
 }
@@ -267,7 +284,7 @@ function constructClientGameUpdateMessage(clientId) {
 	const message = {
 		type: "gameUpdate",
 		camera: clientState.camera,
-		cells: Array.from(cells.values())
+		cells: cells.getAll()
 	};
 
 	return message;

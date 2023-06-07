@@ -4,10 +4,10 @@ const CAMERA_VIEW_AREA_HEIGHT_TO_WIDTH_RATIO = 1080 / 1920;
 const SERVER_TICK_PERIOD = 40; // in milliseconds
 const EXPECTED_UPDATE_DELAY_VARIANCE = 20; // in milliseconds, larger = more delay but less jittery
 const LERP_PERIOD_FLEXIBILITY = 0.2; // 0-1, lower = more stable movement speed but less adaptive to network jitter
-const CELL_RADIUS = 100;
+const MASS_TO_AREA_MULTIPLIER = 200;
 const CELL_COLOR = "#0095DD";
 const GRID_LINE_COLOR = "#AAAAAA";
-const GRID_LINE_SPACING = 100;
+const GRID_LINE_SPACING = 40;
 
 
 const canvas = document.getElementById("gameArea");
@@ -30,9 +30,14 @@ class Position {
 
 
 class Cell {
-	constructor(id, position) {
+	constructor(id, position, mass) {
 		this.id = id;
 		this.position = position;
+		this.mass = mass;
+	}
+	
+	get radius() {
+		return Math.sqrt(this.mass * MASS_TO_AREA_MULTIPLIER / Math.PI);
 	}
 }
 
@@ -197,7 +202,7 @@ function drawCells() {
 
 function drawCell(cell) {
 	const screenPos = gameSpaceToScreenSpace(cell.position);
-	const radius = CELL_RADIUS * getGameSpaceToScreenSpaceScalingFactor();
+	const radius = cell.radius * getGameSpaceToScreenSpaceScalingFactor();
 
 	ctx.beginPath();
 	ctx.arc(screenPos.x, screenPos.y, radius, 0, Math.PI * 2);
@@ -301,8 +306,9 @@ function lerpObjectMapsOfSameType(objectMap1, objectMap2, t, objectLerpFunction)
 
 function lerpCell(cell1, cell2, t) {
 	const lerpedPosition = lerpPosition(cell1.position, cell2.position, t);
+	const lerpedMass = lerp(cell1.mass, cell2.mass, t);
 
-	return new Cell(cell1.id, lerpedPosition);
+	return new Cell(cell1.id, lerpedPosition, lerpedMass);
 }
 
 
@@ -382,11 +388,11 @@ function handleJoinGameResponseMessage(message) {
 
 
 function handleGameUpdateMessage(message) {
-	const camera = message.camera;
+	const camera = Object.assign(new Camera, message.camera);
 
 	const cells = new Map();
 	for (const cell of message.cells) {
-		cells.set(cell.id, cell);
+		cells.set(cell.id, Object.assign(new Cell, cell));
 	}
 
 	const newGameState = new GameState(camera, cells);
