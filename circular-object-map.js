@@ -34,16 +34,6 @@ class CircularObjectMap {
 		this._objects = new Map(); // key: id
 		this._quadTree = new QuadTree(centerX, centerY, extentX, extentY);
 	}
-	
-	/**
-	 * Retrieves the object with the given id from the collection.
-	 * 
-	 * @param id This id of the object to get.
-	 * @returns A copy of the object if found, otherwise null.
-	 */
-	get(id) {
-		return structuredClone(this._objects.get(id) || null);
-	}
 
 	/**
 	 * Adds the given object to the collection.
@@ -73,6 +63,25 @@ class CircularObjectMap {
 			this._objects.delete(id);
 		}
 	}
+	
+	/**
+	 * Retrieves the object with the given id from the collection.
+	 * 
+	 * @param id This id of the object to get.
+	 * @returns A copy of the object if found, otherwise null.
+	 */
+	get(id) {
+		return structuredClone(this._objects.get(id) || null);
+	}
+    
+    /**
+     * Retrieves all objects stored in the collection.
+     * 
+     * @returns A list of copies of all the objects stored in the collection.
+     */
+    getAll() {
+        return structuredClone(Array.from(this._objects.values()));
+    }
 
 	/**
 	 * Finds all objects which intersect the given object and which are smaller than it.
