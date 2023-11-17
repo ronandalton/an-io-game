@@ -119,7 +119,7 @@ class QuadTree {
 
 	_mergeNode() {
 		this.objects = [];
-		
+
 		for (const childNode of this.children) {
 			this.objects = this.objects.concat(childNode.objects);
 		}

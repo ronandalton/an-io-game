@@ -32,7 +32,7 @@ class Position {
 		this.x = x;
 		this.y = y;
 	}
-	
+
 	clone() {
 		return new Position(this.x, this.y);
 	}
@@ -45,19 +45,19 @@ class Cell {
 		this.position = position;
 		this.mass = mass;
 	}
-	
+
 	get x() {
 		return this.position.x;
 	}
-	
+
 	get y() {
 		return this.position.y;
 	}
-	
+
 	get radius() {
 		return Math.sqrt(this.mass * MASS_TO_AREA_MULTIPLIER / Math.PI);
 	}
-	
+
 	clone() {
 		return new Cell(this.id, this.position.clone(), this.mass);
 	}
@@ -91,15 +91,15 @@ class FoodParticle {
 	get x() {
 		return this.position.x;
 	}
-	
+
 	get y() {
 		return this.position.y;
 	}
-	
+
 	get radius() {
 		return FOOD_RADIUS;
 	}
-	
+
 	clone() {
 		return new FoodParticle(this.id, this.position.clone(), this.hue);
 	}
@@ -276,7 +276,7 @@ function updateGameState() {
 		if (player.targetPosition !== null) {
 			moveCellTowardsTargetPosition(playerCell, player.targetPosition, CELL_MOVEMENT_SPEED);
 		}
-		
+
 		// TODO: better covering algorithm
 		const foodParticlesCovered = foodParticles.findSmallerObjectsIntersecting(playerCell);
 		for (const foodParticle of foodParticlesCovered) {

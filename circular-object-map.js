@@ -45,9 +45,9 @@ class CircularObjectMap {
 	 */
 	add(object) {
 		this.remove(object.id);
-		
+
 		const objectCopy = object.clone();
-		
+
 		this._objects.set(object.id, objectCopy);
 		this._quadTree.insert(objectCopy);
 	}
@@ -64,7 +64,7 @@ class CircularObjectMap {
 			this._objects.delete(id);
 		}
 	}
-	
+
 	/**
 	 * Retrieves the object with the given id from the collection.
 	 * 
@@ -74,15 +74,15 @@ class CircularObjectMap {
 	get(id) {
 		return this._objects.has(id) ? this._objects.get(id).clone() : null;
 	}
-    
-    /**
-     * Retrieves all objects stored in the collection.
-     * 
-     * @returns A list of copies of all the objects stored in the collection.
-     */
-    getAll() {
+
+	/**
+	 * Retrieves all objects stored in the collection.
+	 * 
+	 * @returns A list of copies of all the objects stored in the collection.
+	 */
+	getAll() {
 		return Array.from(this._objects.values()).map((object) => (object.clone()));
-    }
+	}
 
 	/**
 	 * Finds all objects which intersect the given object and which are smaller than it.
