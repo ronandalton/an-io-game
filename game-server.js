@@ -4,21 +4,23 @@ import {CircularObjectMap} from './circular-object-map.js'
 
 const SERVER_PORT = 4000;
 const MAX_PLAYERS = 200;
-const PLAY_AREA_WIDTH = 500;
-const PLAY_AREA_HEIGHT = 400;
+const PLAY_AREA_WIDTH = 10000;
+const PLAY_AREA_HEIGHT = 8000;
 const SERVER_TICK_PERIOD = 40; // in milliseconds
 const CELL_MOVEMENT_SPEED = 20;
 const CAMERA_START_VIEW_AREA_WIDTH = 2000;
 const CAMERA_VIEW_AREA_HEIGHT_TO_WIDTH_RATIO = 1080 / 1920;
 const PLAYER_STARTING_MASS = 100;
 const MASS_TO_AREA_MULTIPLIER = 200;
+const FOOD_RADIUS = 12;
 
 
 let websocketServer = null;
 const clientStates = new Map(); // key: clientId (all client data except player specific data)
-const players = new Map(); // key: playerId
-const cells = new CircularObjectMap();
 const availablePlayerIds = [];
+const players = new Map(); // key: playerId
+const cells = new CircularObjectMap(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
+const foodParticles = new CircularObjectMap(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
 
 for (let i = MAX_PLAYERS - 1; i >= 0; i--) {
 	availablePlayerIds.push(i);
@@ -29,6 +31,10 @@ class Position {
 	constructor(x, y) {
 		this.x = x;
 		this.y = y;
+	}
+	
+	clone() {
+		return new Position(this.x, this.y);
 	}
 }
 
@@ -41,15 +47,19 @@ class Cell {
 	}
 	
 	get x() {
-		return position.x;
+		return this.position.x;
 	}
 	
 	get y() {
-		return position.y;
+		return this.position.y;
 	}
 	
 	get radius() {
 		return Math.sqrt(this.mass * MASS_TO_AREA_MULTIPLIER / Math.PI);
+	}
+	
+	clone() {
+		return new Cell(this.id, this.position.clone(), this.mass);
 	}
 }
 
@@ -67,6 +77,31 @@ class Camera {
 	constructor(position, viewAreaWidth) {
 		this.position = position;
 		this.viewAreaWidth = viewAreaWidth;
+	}
+}
+
+
+class FoodParticle {
+	constructor(id, position, hue) {
+		this.id = id;
+		this.position = position;
+		this.hue = hue; // 0-255 value representing color
+	}
+
+	get x() {
+		return this.position.x;
+	}
+	
+	get y() {
+		return this.position.y;
+	}
+	
+	get radius() {
+		return FOOD_RADIUS;
+	}
+	
+	clone() {
+		return new FoodParticle(this.id, this.position.clone(), this.hue);
 	}
 }
 
@@ -92,6 +127,18 @@ function startServer() {
 
 function setupGame() {
 	// TODO
+	spawnFood();
+}
+
+
+function spawnFood() {
+	for (let i = 0; i < 4000; i++) {
+		const id = generateGameObjectId();
+		const position = getRandomPosition();
+		const hue = getRandomInt(0, 256);
+		const foodParticle = new FoodParticle(id, position, hue);
+		foodParticles.add(foodParticle);
+	}
 }
 
 
@@ -228,8 +275,16 @@ function updateGameState() {
 
 		if (player.targetPosition !== null) {
 			moveCellTowardsTargetPosition(playerCell, player.targetPosition, CELL_MOVEMENT_SPEED);
-			cells.add(playerCell);
 		}
+		
+		// TODO: better covering algorithm
+		const foodParticlesCovered = foodParticles.findSmallerObjectsIntersecting(playerCell);
+		for (const foodParticle of foodParticlesCovered) {
+			foodParticles.remove(foodParticle.id);
+			playerCell.mass += 10;
+		}
+
+		cells.add(playerCell);
 	}
 }
 
@@ -265,7 +320,7 @@ function updateCameraForClient(clientState) {
 	if (clientState.playerId !== null) {
 		const player = players.get(clientState.playerId);
 		const cell = cells.get(player.cellId);
-		clientState.camera.position = structuredClone(cell.position);
+		clientState.camera.position = cell.position.clone();
 	}
 }
 
@@ -284,7 +339,8 @@ function constructClientGameUpdateMessage(clientId) {
 	const message = {
 		type: "gameUpdate",
 		camera: clientState.camera,
-		cells: cells.getAll()
+		cells: cells.getAll(),
+		foodParticles: foodParticles.getAll()
 	};
 
 	return message;

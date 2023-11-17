@@ -4,6 +4,7 @@ import {QuadTree} from './quad-tree.js'
 /**
  * Manages a large collection of circular objects arranged in 2D space.
  * A circular object defines x, y, radius and id.
+ * Each object must also provide a .clone() method that returns a copy of the object.
  * An efficient procedure to retrieve objects intersecting a given object is provided.
  *
  * Note that objects cannot be modified while they are in the collection.
@@ -45,7 +46,7 @@ class CircularObjectMap {
 	add(object) {
 		this.remove(object.id);
 		
-		const objectCopy = structuredClone(object);
+		const objectCopy = object.clone();
 		
 		this._objects.set(object.id, objectCopy);
 		this._quadTree.insert(objectCopy);
@@ -71,7 +72,7 @@ class CircularObjectMap {
 	 * @returns A copy of the object if found, otherwise null.
 	 */
 	get(id) {
-		return structuredClone(this._objects.get(id) || null);
+		return this._objects.has(id) ? this._objects.get(id).clone() : null;
 	}
     
     /**
@@ -80,7 +81,7 @@ class CircularObjectMap {
      * @returns A list of copies of all the objects stored in the collection.
      */
     getAll() {
-        return structuredClone(Array.from(this._objects.values()));
+		return Array.from(this._objects.values()).map((object) => (object.clone()));
     }
 
 	/**
@@ -105,7 +106,7 @@ class CircularObjectMap {
 						object.x, object.y, object.radius)) {
 					if (candidate.radius < object.radius || (candidate.radius === object.radius
 							&& candidate.id < object.id)) {
-						objectsFound.push(structuredClone(candidate));
+						objectsFound.push(candidate.clone());
 					}
 				}
 			}

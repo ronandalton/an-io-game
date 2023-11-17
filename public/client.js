@@ -5,6 +5,7 @@ const SERVER_TICK_PERIOD = 40; // in milliseconds
 const EXPECTED_UPDATE_DELAY_VARIANCE = 20; // in milliseconds, larger = more delay but less jittery
 const LERP_PERIOD_FLEXIBILITY = 0.2; // 0-1, lower = more stable movement speed but less adaptive to network jitter
 const MASS_TO_AREA_MULTIPLIER = 200;
+const FOOD_RADIUS = 12;
 const CELL_COLOR = "#0095DD";
 const GRID_LINE_COLOR = "#AAAAAA";
 const GRID_LINE_SPACING = 40;
@@ -59,10 +60,24 @@ class Camera {
 }
 
 
+class FoodParticle {
+	constructor(id, position, hue) {
+		this.id = id;
+		this.position = position;
+		this.hue = hue; // 0-255 value representing color
+	}
+	
+	get radius() {
+		return FOOD_RADIUS;
+	}
+}
+
+
 class GameState {
-	constructor(camera = new Camera(), cells = new Map()) {
+	constructor(camera = new Camera(), cells = new Map(), foodParticles = new Map()) {
 		this.camera = camera;
 		this.cells = cells; // map with key: cellId
+		this.foodParticles = foodParticles;
 	}
 };
 
@@ -106,6 +121,7 @@ function draw() {
 
 	if (currentGameState !== null) {
 		drawGrid();
+		drawFoodParticles();
 		drawCells();
 	}
 }
@@ -188,6 +204,27 @@ function drawGridLine(distanceAcrossScreen, isVertical) {
 	ctx.lineTo(lineEndPos.x, lineEndPos.y);
 	ctx.strokeStyle = GRID_LINE_COLOR;
 	ctx.stroke();
+}
+
+
+function drawFoodParticles() {
+	const foodParticles = currentGameState.foodParticles.values();
+	
+	for (const foodParticle of foodParticles) {
+		drawFoodParticle(foodParticle);
+	}
+}
+
+
+function drawFoodParticle(foodParticle) {
+	const screenPos = gameSpaceToScreenSpace(foodParticle.position);
+	const radius = foodParticle.radius * getGameSpaceToScreenSpaceScalingFactor();
+	const color = `hsl(${foodParticle.hue / 256 * 360} 100% 50%)`;
+	
+	ctx.beginPath();
+	ctx.arc(screenPos.x, screenPos.y, radius, 0, Math.PI * 2);
+	ctx.fillStyle = color;
+	ctx.fill();
 }
 
 
@@ -276,8 +313,10 @@ function removeOldStatesFromGameStateBuffer(currentTime) {
 function lerpGameStates(state1, state2, t) {
 	const lerpedCamera = lerpCamera(state1.camera, state2.camera, t);
 	const lerpedCells = lerpObjectMapsOfSameType(state1.cells, state2.cells, t, lerpCell);
+	const lerpedFoodParticles = lerpObjectMapsOfSameType(state1.foodParticles,
+		state2.foodParticles, t, lerpFoodParticle);
 
-	return new GameState(lerpedCamera, lerpedCells);
+	return new GameState(lerpedCamera, lerpedCells, lerpedFoodParticles);
 }
 
 
@@ -309,6 +348,14 @@ function lerpCell(cell1, cell2, t) {
 	const lerpedMass = lerp(cell1.mass, cell2.mass, t);
 
 	return new Cell(cell1.id, lerpedPosition, lerpedMass);
+}
+
+
+function lerpFoodParticle(foodParticle1, foodParticle2, t) {
+	const lerpedPosition = lerpPosition(foodParticle1.position, foodParticle2.position, t);
+
+	// hue is assumed constant
+	return new FoodParticle(foodParticle1.id, lerpedPosition, foodParticle1.hue);
 }
 
 
@@ -395,7 +442,12 @@ function handleGameUpdateMessage(message) {
 		cells.set(cell.id, Object.assign(new Cell, cell));
 	}
 
-	const newGameState = new GameState(camera, cells);
+	const foodParticles = new Map();
+	for (const foodParticle of message.foodParticles) {
+		foodParticles.set(foodParticle.id, Object.assign(new FoodParticle, foodParticle));
+	}
+
+	const newGameState = new GameState(camera, cells, foodParticles);
 
 	addGameStateToBuffer(newGameState);
 }
