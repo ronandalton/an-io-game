@@ -121,6 +121,8 @@ function startServer() {
 	websocketServer = new WebSocketServer({port: SERVER_PORT});
 	websocketServer.on('connection', handleNewConnection);
 
+	console.log(`Listening on port ${SERVER_PORT}.`);
+
 	setInterval(tick, SERVER_TICK_PERIOD);
 }
 
