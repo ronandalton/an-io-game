@@ -14,6 +14,7 @@
   },
   "type": "module",
   "scripts": {
+    "build": "tsc --build",
     "start:dev": "concurrently --kill-others --names \"frontend,game-server\" \"npm run start -w @ronandalton/an-io-game-frontend\" \"npm run start -w @ronandalton/an-io-game-game-server\"",
     "start:frontend": "npm run start -w @ronandalton/an-io-game-frontend",
     "start:game_server": "npm run start -w @ronandalton/an-io-game-game-server",
