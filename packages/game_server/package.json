@@ -4,7 +4,8 @@
   "description": "The Websocket game server for an-io-game",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "build": "tsc --build",
+    "start": "tsx src/server_test.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,7 +23,8 @@
     "ws": "^8.13.0"
   },
   "devDependencies": {
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "tsx": "^4.6.0"
   },
   "type": "module"
 }

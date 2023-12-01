@@ -12,10 +12,10 @@
     "type": "git",
     "url": "git+https://github.com/ronandalton/an-io-game.git"
   },
-  "type": "module",
   "scripts": {
-    "build": "tsc --build",
-    "start:dev": "concurrently --kill-others --names \"frontend,game-server\" \"npm run start -w @ronandalton/an-io-game-frontend\" \"npm run start -w @ronandalton/an-io-game-game-server\"",
+    "build": "npm run build:game_server",
+    "build:game_server": "npm run build -w @ronandalton/an-io-game-game-server",
+    "start": "concurrently --kill-others --names \"frontend,game-server\" \"npm run start:frontend\" \"npm run start:game_server\"",
     "start:frontend": "npm run start -w @ronandalton/an-io-game-frontend",
     "start:game_server": "npm run start -w @ronandalton/an-io-game-game-server",
     "test": "echo \"Error: no test specified\" && exit 1"
