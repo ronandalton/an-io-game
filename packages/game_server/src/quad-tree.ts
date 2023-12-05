@@ -9,18 +9,27 @@ const QUAD_TREE_MAX_DEPTH = 3;
  * first removing and then reinserting it.
  */
 class QuadTree {
-	constructor(centerX, centerY, extentX, extentY, depth = 0) {
+	public centerX: number;
+	public centerY: number;
+	public extentX: number; // extentX * 2 = rectangle width
+	public extentY: number; // extentY * 2 = rectangle height
+	public depth: number;
+	public isLeaf: boolean;
+	public objects: any[]; // empty if this isn't a leaf node
+	public children: QuadTree[]; // empty if this is a leaf
+
+	constructor(centerX: number, centerY: number, extentX: number, extentY: number, depth: number = 0) {
 		this.centerX = centerX;
 		this.centerY = centerY;
-		this.extentX = extentX; // extentX * 2 = rectangle width
-		this.extentY = extentY; // extentY * 2 = rectangle height
+		this.extentX = extentX;
+		this.extentY = extentY;
 		this.depth = depth;
 		this.isLeaf = true;
-		this.objects = []; // null if !isLeaf
-		this.children = null; // [] if !isLeaf
+		this.objects = [];
+		this.children = [];
 	}
 
-	insert(object) {
+	insert(object: any) {
 		if (this.isLeaf) {
 			this.objects.push(object);
 			if (this.objects.length > QUAD_TREE_THRESHOLD) {
@@ -33,7 +42,7 @@ class QuadTree {
 		}
 	}
 
-	remove(object) {
+	remove(object: any) {
 		if (this.isLeaf) {
 			const index = this.objects.indexOf(object);
 			if (index !== -1) {
@@ -48,14 +57,14 @@ class QuadTree {
 		}
 	}
 
-	findObjectsInCenteredRect(rectCenterX, rectCenterY, rectExtentX, rectExtentY) {
+	findObjectsInCenteredRect(rectCenterX: number, rectCenterY: number, rectExtentX: number, rectExtentY: number): any[] {
 		if (!centeredRectanglesIntersect(
 				rectCenterX, rectCenterY, rectExtentX, rectExtentY,
 				this.centerX, this.centerY, this.extentX, this.extentY)) {
 			return [];
 		}
 
-		let objectsFound = [];
+		let objectsFound: any[] = [];
 
 		if (this.isLeaf) {
 			for (const object of this.objects) {
@@ -95,7 +104,7 @@ class QuadTree {
 			this.children[this._getQuadrantOfPoint(object.x, object.y)].insert(object);
 		}
 
-		this.objects = null;
+		this.objects = [];
 		this.isLeaf = false;
 	}
 
@@ -117,33 +126,33 @@ class QuadTree {
 		return combinedChildNodeObjectCount <= QUAD_TREE_THRESHOLD;
 	}
 
-	_mergeNode() {
+	_mergeNode(): void {
 		this.objects = [];
 
 		for (const childNode of this.children) {
 			this.objects = this.objects.concat(childNode.objects);
 		}
 
-		this.children = null;
+		this.children = [];
 		this.isLeaf = true;
 	}
 
-	_getQuadrantOfPoint(x, y) {
-		return 2 * (y >= this.centerY) + (x >= this.centerX);
+	_getQuadrantOfPoint(x: number, y: number): number {
+		return (y >= this.centerY ? 2 : 0) + (x >= this.centerX ? 1 : 0);
 	}
 }
 
 
 function centeredRectangleContainsPoint(
-		rectCenterX, rectCenterY, rectExtentX, rectExtentY, pointX, pointY) {
+		rectCenterX: number, rectCenterY: number, rectExtentX: number, rectExtentY: number, pointX: number, pointY: number): boolean {
 	return (Math.abs(pointX - rectCenterX) < rectExtentX)
 		&& (Math.abs(pointY - rectCenterY) < rectExtentY);
 }
 
 
 function centeredRectanglesIntersect(
-		rect1CenterX, rect1CenterY, rect1ExtentX, rect1ExtentY,
-		rect2CenterX, rect2CenterY, rect2ExtentX, rect2ExtentY) {
+		rect1CenterX: number, rect1CenterY: number, rect1ExtentX: number, rect1ExtentY: number,
+		rect2CenterX: number, rect2CenterY: number, rect2ExtentX: number, rect2ExtentY: number): boolean {
 	return (Math.abs(rect1CenterX - rect2CenterX) < rect1ExtentX + rect2ExtentX)
 		&& (Math.abs(rect1CenterY - rect2CenterY) < rect1ExtentY + rect2ExtentY);
 }

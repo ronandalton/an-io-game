@@ -17,6 +17,9 @@ import {QuadTree} from './quad-tree.js'
  * right on the edge of the bounds.
  */
 class CircularObjectMap {
+	private _objects: Map<number, any>; // key: id
+	private _quadTree: QuadTree;
+
 	/**
 	 * Constructs a new CircularObjectMap.
 	 * The origin is the top left corner of the area to be covered by the map.
@@ -26,13 +29,13 @@ class CircularObjectMap {
 	 * @param width The width of map area.
 	 * @param height The height of map area.
 	 */
-	constructor(originX, originY, width, height) {
+	constructor(originX: number, originY: number, width: number, height: number) {
 		const centerX = originX + width / 2;
 		const centerY = originY + height / 2;
 		const extentX = width / 2;
 		const extentY = height / 2;
 
-		this._objects = new Map(); // key: id
+		this._objects = new Map();
 		this._quadTree = new QuadTree(centerX, centerY, extentX, extentY);
 	}
 
@@ -43,7 +46,7 @@ class CircularObjectMap {
 	 *
 	 * @param object A circular object that defines x, y, radius and id.
 	 */
-	add(object) {
+	add(object: any) {
 		this.remove(object.id);
 
 		const objectCopy = object.clone();
@@ -58,7 +61,7 @@ class CircularObjectMap {
 	 *
 	 * @param id The id of the object to remove.
 	 */
-	remove(id) {
+	remove(id: number) {
 		if (this._objects.has(id)) {
 			this._quadTree.remove(this._objects.get(id));
 			this._objects.delete(id);
@@ -71,7 +74,7 @@ class CircularObjectMap {
 	 * @param id This id of the object to get.
 	 * @returns A copy of the object if found, otherwise null.
 	 */
-	get(id) {
+	get(id: number): any | null {
 		return this._objects.has(id) ? this._objects.get(id).clone() : null;
 	}
 
@@ -80,7 +83,7 @@ class CircularObjectMap {
 	 * 
 	 * @returns A list of copies of all the objects stored in the collection.
 	 */
-	getAll() {
+	getAll(): any[] {
 		return Array.from(this._objects.values()).map((object) => (object.clone()));
 	}
 
@@ -94,7 +97,7 @@ class CircularObjectMap {
 	 * This object doesn't have to be in the collection.
 	 * @return A list of objects in the collection which intersect the given object.
 	 */
-	findSmallerObjectsIntersecting(object) {
+	findSmallerObjectsIntersecting(object: any): any[] {
 		const objectsFound = [];
 
 		const candidates = this._quadTree.findObjectsInCenteredRect(
@@ -117,7 +120,7 @@ class CircularObjectMap {
 }
 
 
-function circlesIntersect(x1, y1, r1, x2, y2, r2) {
+function circlesIntersect(x1: number, y1: number, r1: number, x2: number, y2: number, r2: number): boolean {
 	const dx = x1 - x2;
 	const dy = y1 - y2;
 	const distance = Math.sqrt(dx * dx + dy * dy);

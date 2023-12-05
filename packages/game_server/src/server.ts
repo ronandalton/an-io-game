@@ -1,4 +1,4 @@
-import {WebSocketServer} from 'ws';
+import {WebSocketServer, WebSocket, RawData} from 'ws';
 import {CircularObjectMap} from './circular-object-map.js'
 
 
@@ -15,12 +15,18 @@ const MASS_TO_AREA_MULTIPLIER = 200;
 const FOOD_RADIUS = 12;
 
 
-let websocketServer = null;
-const clientStates = new Map(); // key: clientId (all client data except player specific data)
-const availablePlayerIds = [];
-const players = new Map(); // key: playerId
-const cells = new CircularObjectMap(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
-const foodParticles = new CircularObjectMap(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
+// TODO: use these
+type Id = number;
+type PlayerId = Id;
+type ClientId = Id;
+
+
+let websocketServer: WebSocketServer | null = null;
+const clientStates: Map<number, ClientState> = new Map(); // key: clientId (all client data except player specific data)
+const availablePlayerIds: number[] = [];
+const players: Map<number, Player> = new Map(); // key: playerId
+const cells: CircularObjectMap = new CircularObjectMap(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
+const foodParticles: CircularObjectMap = new CircularObjectMap(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
 
 for (let i = MAX_PLAYERS - 1; i >= 0; i--) {
 	availablePlayerIds.push(i);
@@ -28,44 +34,55 @@ for (let i = MAX_PLAYERS - 1; i >= 0; i--) {
 
 
 class Position {
-	constructor(x, y) {
+	x: number;
+	y: number;
+
+	constructor(x: number, y: number) {
 		this.x = x;
 		this.y = y;
 	}
 
-	clone() {
+	clone(): Position {
 		return new Position(this.x, this.y);
 	}
 }
 
 
 class Cell {
-	constructor(id, position, mass) {
+	id: number;
+	position: Position;
+	mass: number;
+
+	constructor(id: number, position: Position, mass: number) {
 		this.id = id;
 		this.position = position;
 		this.mass = mass;
 	}
 
-	get x() {
+	get x(): number {
 		return this.position.x;
 	}
 
-	get y() {
+	get y(): number {
 		return this.position.y;
 	}
 
-	get radius() {
+	get radius(): number {
 		return Math.sqrt(this.mass * MASS_TO_AREA_MULTIPLIER / Math.PI);
 	}
 
-	clone() {
+	clone(): Cell {
 		return new Cell(this.id, this.position.clone(), this.mass);
 	}
 }
 
 
 class Player {
-	constructor(id, cellId, targetPosition) {
+	id: number;
+	cellId: number;
+	targetPosition: Position | null;
+
+	constructor(id: number, cellId: number, targetPosition: Position | null) {
 		this.id = id;
 		this.cellId = cellId;
 		this.targetPosition = targetPosition;
@@ -74,7 +91,10 @@ class Player {
 
 
 class Camera {
-	constructor(position, viewAreaWidth) {
+	position: Position;
+	viewAreaWidth: number;
+
+	constructor(position: Position, viewAreaWidth: number) {
 		this.position = position;
 		this.viewAreaWidth = viewAreaWidth;
 	}
@@ -82,40 +102,74 @@ class Camera {
 
 
 class FoodParticle {
-	constructor(id, position, hue) {
+	id: number;
+	position: Position;
+	hue: number; // 0-255 value representing color
+
+	constructor(id: number, position: Position, hue: number) {
 		this.id = id;
 		this.position = position;
-		this.hue = hue; // 0-255 value representing color
+		this.hue = hue;
 	}
 
-	get x() {
+	get x(): number {
 		return this.position.x;
 	}
 
-	get y() {
+	get y(): number {
 		return this.position.y;
 	}
 
-	get radius() {
+	get radius(): number {
 		return FOOD_RADIUS;
 	}
 
-	clone() {
+	clone(): FoodParticle {
 		return new FoodParticle(this.id, this.position.clone(), this.hue);
 	}
 }
 
 
 class ClientState {
-	constructor(clientId, camera) {
+	clientId: number;
+	camera: Camera;
+	playerId: number | null; // null if dead or spectating
+
+	constructor(clientId: number, camera: Camera) {
 		this.clientId = clientId;
 		this.camera = camera;
-		this.playerId = null; // null if dead or spectating
+		this.playerId = null;
 	}
 }
 
 
-function startServer() {
+type JoinGameRequestMessage = {
+	type: 'joinGameRequest';
+};
+
+
+type TargetPositionUpdateMessage = {
+	type: 'targetPositionUpdate';
+	position: Position;
+};
+
+
+type JoinGameResponseMessage = {
+	type: 'joinGameResponse';
+	joinSuccessful: boolean;
+	playerId: number | undefined;
+};
+
+
+type GameUpdateMessage = {
+	type: 'gameUpdate';
+	camera: Camera;
+	cells: Cell[];
+	foodParticles: FoodParticle[];
+};
+
+
+function startServer(): void {
 	setupGame();
 
 	websocketServer = new WebSocketServer({port: SERVER_PORT});
@@ -127,13 +181,13 @@ function startServer() {
 }
 
 
-function setupGame() {
+function setupGame(): void {
 	// TODO
 	spawnFood();
 }
 
 
-function spawnFood() {
+function spawnFood(): void {
 	for (let i = 0; i < 4000; i++) {
 		const id = generateGameObjectId();
 		const position = getRandomPosition();
@@ -144,15 +198,15 @@ function spawnFood() {
 }
 
 
-function handleNewConnection(connection) {
+function handleNewConnection(connection: WebSocket): void {
 	registerNewClient(connection);
 
 	connection.on('error', console.error);
-	connection.on('message', (data) => handleWebsocketMessage(connection, data));
+	connection.on('message', (data: RawData): void => handleWebsocketMessage(connection, data));
 }
 
 
-function registerNewClient(connection) {
+function registerNewClient(connection: WebSocket): void {
 	const clientId = generateClientId();
 	const camera = createCameraForNewClient();
 
@@ -163,7 +217,7 @@ function registerNewClient(connection) {
 }
 
 
-function createCameraForNewClient() {
+function createCameraForNewClient(): Camera {
 	const position = new Position(PLAY_AREA_WIDTH / 2, PLAY_AREA_HEIGHT / 2);
 	const viewAreaWidth = CAMERA_START_VIEW_AREA_WIDTH;
 
@@ -171,9 +225,9 @@ function createCameraForNewClient() {
 }
 
 
-function handleWebsocketMessage(connection, data) {
+function handleWebsocketMessage(connection: WebSocket, data: RawData): void {
 	try {
-		const message = JSON.parse(data);
+		const message = JSON.parse(data.toString());
 
 		switch (message.type) {
 			case "joinGameRequest":
@@ -182,6 +236,8 @@ function handleWebsocketMessage(connection, data) {
 			case "targetPositionUpdate":
 				handleTargetPositionUpdateMessage(connection, message);
 				break;
+			default:
+				throw new Error("Unknown message type received")
 		}
 	} catch (error) {
 		console.log(error);
@@ -189,8 +245,12 @@ function handleWebsocketMessage(connection, data) {
 }
 
 
-function handleJoinGameRequestMessage(connection, message) {
+function handleJoinGameRequestMessage(connection: WebSocket, message: JoinGameRequestMessage): void {
 	const clientState = clientStates.get(connection.clientId);
+
+	if (clientState === undefined) {
+		throw new Error("Client state doesn't exist");
+	}
 
 	if (clientState.playerId !== null) { // can't join game since already joined
 		sendJoinGameResponseMessage(connection, false);
@@ -210,7 +270,7 @@ function handleJoinGameRequestMessage(connection, message) {
 }
 
 
-function spawnPlayer() {
+function spawnPlayer(): Player | null {
 	const playerId = getUnusedPlayerId();
 
 	if (playerId === null) {
@@ -229,17 +289,19 @@ function spawnPlayer() {
 }
 
 
-function getUnusedPlayerId() {
-	if (availablePlayerIds.length > 0) {
-		return availablePlayerIds.pop();
-	} else {
-		return null;
-	}
+function getUnusedPlayerId(): number | null {
+	return availablePlayerIds.pop() ?? null;
 }
 
 
-function handleTargetPositionUpdateMessage(connection, message) {
-	const playerId = clientStates.get(connection.clientId).playerId;
+function handleTargetPositionUpdateMessage(connection: WebSocket, message: TargetPositionUpdateMessage): void {
+	const clientState = clientStates.get(connection.clientId);
+
+	if (clientState === undefined) {
+		throw new Error("Client state doesn't exist");
+	}
+
+	const playerId = clientState.playerId;
 
 	if (playerId === null) {
 		return; // message is meaningless if they aren't an actual player
@@ -247,31 +309,39 @@ function handleTargetPositionUpdateMessage(connection, message) {
 
 	const player = players.get(playerId);
 
+	if (player === undefined) {
+		throw new Error("Player not found");
+	}
+
 	player.targetPosition = message.position;
 }
 
 
-function sendJoinGameResponseMessage(connection, joinSuccessful) {
+function sendJoinGameResponseMessage(connection: WebSocket, joinSuccessful: boolean): void {
 	const clientState = clientStates.get(connection.clientId);
 
-	const message = {
-		type: "joinGameResponse",
+	if (clientState === undefined) {
+		throw new Error("Client state doesn't exist");
+	}
+
+	const message: JoinGameResponseMessage = {
+		type: 'joinGameResponse',
 		joinSuccessful: joinSuccessful,
-		playerId: clientState.playerId
+		playerId: clientState.playerId ?? undefined
 	};
 
 	connection.send(JSON.stringify(message));
 }
 
 
-function tick() {
+function tick(): void {
 	updateGameState();
 	updateClientStates();
 	sendUpdatedGameStateToClients();
 }
 
 
-function updateGameState() {
+function updateGameState(): void {
 	for (const player of players.values()) {
 		const playerCell = cells.get(player.cellId);
 
@@ -291,7 +361,7 @@ function updateGameState() {
 }
 
 
-function moveCellTowardsTargetPosition(cell, targetPosition, moveDistance) {
+function moveCellTowardsTargetPosition(cell: Cell, targetPosition: Position, moveDistance: number): void {
 	const dx = targetPosition.x - cell.position.x;
 	const dy = targetPosition.y - cell.position.y;
 
@@ -311,35 +381,48 @@ function moveCellTowardsTargetPosition(cell, targetPosition, moveDistance) {
 }
 
 
-function updateClientStates() {
+function updateClientStates(): void {
 	for (const clientState of clientStates.values()) {
 		updateCameraForClient(clientState);
 	}
 }
 
 
-function updateCameraForClient(clientState) {
+function updateCameraForClient(clientState: ClientState): void {
 	if (clientState.playerId !== null) {
 		const player = players.get(clientState.playerId);
+
+		if (player === undefined) {
+			throw new Error("Player not found");
+		}
+
 		const cell = cells.get(player.cellId);
 		clientState.camera.position = cell.position.clone();
 	}
 }
 
 
-function sendUpdatedGameStateToClients() {
-	websocketServer.clients.forEach((connection) => {
+function sendUpdatedGameStateToClients(): void {
+	if (websocketServer === null) {
+		throw new Error("WebSocket server is not initialized");
+	}
+
+	websocketServer.clients.forEach((connection: WebSocket) => {
 		const message = constructClientGameUpdateMessage(connection.clientId);
 		connection.send(JSON.stringify(message));
 	});
 }
 
 
-function constructClientGameUpdateMessage(clientId) {
+function constructClientGameUpdateMessage(clientId: number): GameUpdateMessage {
 	const clientState = clientStates.get(clientId)
 
-	const message = {
-		type: "gameUpdate",
+	if (clientState === undefined) {
+		throw new Error("Client state doesn't exist");
+	}
+
+	const message: GameUpdateMessage = {
+		type: 'gameUpdate',
 		camera: clientState.camera,
 		cells: cells.getAll(),
 		foodParticles: foodParticles.getAll()
@@ -349,17 +432,17 @@ function constructClientGameUpdateMessage(clientId) {
 }
 
 
-function generateClientId() {
+function generateClientId(): number {
 	return getRandomInt(0, 2 ** 32);
 }
 
 
-function generateGameObjectId() {
+function generateGameObjectId(): number {
 	return getRandomInt(0, 2 ** 32);
 }
 
 
-function getRandomPosition() {
+function getRandomPosition(): Position {
 	const x = getRandomInt(0, PLAY_AREA_WIDTH);
 	const y = getRandomInt(0, PLAY_AREA_HEIGHT);
 
@@ -367,7 +450,7 @@ function getRandomPosition() {
 }
 
 
-function getRandomInt(min, max) { // Note that min is inclusive and max is exclusive
+function getRandomInt(min: number, max: number): number { // Note that min is inclusive and max is exclusive
 	min = Math.ceil(min);
 	max = Math.floor(max);
 	return Math.floor(Math.random() * (max - min) + min);
