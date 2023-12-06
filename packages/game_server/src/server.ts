@@ -407,7 +407,8 @@ function sendUpdatedGameStateToClients(): void {
 		throw new Error("WebSocket server is not initialized");
 	}
 
-	websocketServer.clients.forEach((connection: WebSocket) => {
+	// I am unable to make (connection: WebSocket) work inside the forEach so we're just using any
+	websocketServer.clients.forEach((connection: any) => {
 		const message = constructClientGameUpdateMessage(connection.clientId);
 		connection.send(JSON.stringify(message));
 	});
