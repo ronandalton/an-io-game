@@ -1,0 +1,11 @@
+export const SERVER_PORT = 4000;
+export const MAX_PLAYERS = 200;
+export const PLAY_AREA_WIDTH = 10000;
+export const PLAY_AREA_HEIGHT = 8000;
+export const SERVER_TICK_PERIOD = 40; // in milliseconds
+export const CELL_MOVEMENT_SPEED = 20;
+export const CAMERA_START_VIEW_AREA_WIDTH = 2000;
+export const CAMERA_VIEW_AREA_HEIGHT_TO_WIDTH_RATIO = 1080 / 1920;
+export const PLAYER_STARTING_MASS = 100;
+export const MASS_TO_AREA_MULTIPLIER = 200;
+export const FOOD_RADIUS = 12;

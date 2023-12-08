@@ -1,18 +1,13 @@
-import {WebSocketServer, WebSocket, RawData} from 'ws';
-import {CircularObjectMap} from './circular-object-map.js'
-
-
-const SERVER_PORT = 4000;
-const MAX_PLAYERS = 200;
-const PLAY_AREA_WIDTH = 10000;
-const PLAY_AREA_HEIGHT = 8000;
-const SERVER_TICK_PERIOD = 40; // in milliseconds
-const CELL_MOVEMENT_SPEED = 20;
-const CAMERA_START_VIEW_AREA_WIDTH = 2000;
-const CAMERA_VIEW_AREA_HEIGHT_TO_WIDTH_RATIO = 1080 / 1920;
-const PLAYER_STARTING_MASS = 100;
-const MASS_TO_AREA_MULTIPLIER = 200;
-const FOOD_RADIUS = 12;
+import { WebSocketServer, WebSocket, RawData } from 'ws';
+import { Position } from './Position';
+import { Cell } from './Cell';
+import { Player } from './Player';
+import { Camera } from './Camera';
+import { FoodParticle } from './FoodParticle';
+import { ClientState } from './ClientState';
+import { GameUpdateMessage, JoinGameRequestMessage, JoinGameResponseMessage, TargetPositionUpdateMessage } from './messages';
+import { CircularObjectMap } from './CircularObjectMap'
+import { CAMERA_START_VIEW_AREA_WIDTH, CELL_MOVEMENT_SPEED, MAX_PLAYERS, PLAYER_STARTING_MASS, PLAY_AREA_HEIGHT, PLAY_AREA_WIDTH, SERVER_PORT, SERVER_TICK_PERIOD } from './constants';
 
 
 // TODO: use these
@@ -31,142 +26,6 @@ const foodParticles: CircularObjectMap = new CircularObjectMap(0, 0, PLAY_AREA_W
 for (let i = MAX_PLAYERS - 1; i >= 0; i--) {
 	availablePlayerIds.push(i);
 }
-
-
-class Position {
-	x: number;
-	y: number;
-
-	constructor(x: number, y: number) {
-		this.x = x;
-		this.y = y;
-	}
-
-	clone(): Position {
-		return new Position(this.x, this.y);
-	}
-}
-
-
-class Cell {
-	id: number;
-	position: Position;
-	mass: number;
-
-	constructor(id: number, position: Position, mass: number) {
-		this.id = id;
-		this.position = position;
-		this.mass = mass;
-	}
-
-	get x(): number {
-		return this.position.x;
-	}
-
-	get y(): number {
-		return this.position.y;
-	}
-
-	get radius(): number {
-		return Math.sqrt(this.mass * MASS_TO_AREA_MULTIPLIER / Math.PI);
-	}
-
-	clone(): Cell {
-		return new Cell(this.id, this.position.clone(), this.mass);
-	}
-}
-
-
-class Player {
-	id: number;
-	cellId: number;
-	targetPosition: Position | null;
-
-	constructor(id: number, cellId: number, targetPosition: Position | null) {
-		this.id = id;
-		this.cellId = cellId;
-		this.targetPosition = targetPosition;
-	}
-}
-
-
-class Camera {
-	position: Position;
-	viewAreaWidth: number;
-
-	constructor(position: Position, viewAreaWidth: number) {
-		this.position = position;
-		this.viewAreaWidth = viewAreaWidth;
-	}
-}
-
-
-class FoodParticle {
-	id: number;
-	position: Position;
-	hue: number; // 0-255 value representing color
-
-	constructor(id: number, position: Position, hue: number) {
-		this.id = id;
-		this.position = position;
-		this.hue = hue;
-	}
-
-	get x(): number {
-		return this.position.x;
-	}
-
-	get y(): number {
-		return this.position.y;
-	}
-
-	get radius(): number {
-		return FOOD_RADIUS;
-	}
-
-	clone(): FoodParticle {
-		return new FoodParticle(this.id, this.position.clone(), this.hue);
-	}
-}
-
-
-class ClientState {
-	clientId: number;
-	camera: Camera;
-	playerId: number | null; // null if dead or spectating
-
-	constructor(clientId: number, camera: Camera) {
-		this.clientId = clientId;
-		this.camera = camera;
-		this.playerId = null;
-	}
-}
-
-
-type JoinGameRequestMessage = {
-	type: 'joinGameRequest';
-};
-
-
-type TargetPositionUpdateMessage = {
-	type: 'targetPositionUpdate';
-	position: Position;
-};
-
-
-type JoinGameResponseMessage = {
-	type: 'joinGameResponse';
-	joinSuccessful: boolean;
-	playerId: number | undefined;
-};
-
-
-type GameUpdateMessage = {
-	type: 'gameUpdate';
-	camera: Camera;
-	cells: Cell[];
-	foodParticles: FoodParticle[];
-};
 
 
 function startServer(): void {

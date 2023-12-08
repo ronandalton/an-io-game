@@ -1,4 +1,4 @@
-import {QuadTree} from './quad-tree.js'
+import { QuadTree } from './QuadTree'
 
 
 /**
