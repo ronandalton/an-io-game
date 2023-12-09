@@ -1,6 +1,7 @@
+import { Locatable } from "./Locatable";
+
 const QUAD_TREE_THRESHOLD = 4;
 const QUAD_TREE_MAX_DEPTH = 3;
-
 
 /**
  * Manages a collection of points on a 2D plane.
@@ -8,15 +9,15 @@ const QUAD_TREE_MAX_DEPTH = 3;
  * The position of an object must not be changed without
  * first removing and then reinserting it.
  */
-class QuadTree {
+export class QuadTree<T extends Locatable> {
 	public centerX: number;
 	public centerY: number;
 	public extentX: number; // extentX * 2 = rectangle width
 	public extentY: number; // extentY * 2 = rectangle height
 	public depth: number;
 	public isLeaf: boolean;
-	public objects: any[]; // empty if this isn't a leaf node
-	public children: QuadTree[]; // empty if this is a leaf
+	public objects: T[]; // empty if this isn't a leaf node
+	public children: QuadTree<T>[]; // empty if this is a leaf
 
 	constructor(centerX: number, centerY: number, extentX: number, extentY: number, depth: number = 0) {
 		this.centerX = centerX;
@@ -29,7 +30,7 @@ class QuadTree {
 		this.children = [];
 	}
 
-	insert(object: any) {
+	insert(object: T) {
 		if (this.isLeaf) {
 			this.objects.push(object);
 			if (this.objects.length > QUAD_TREE_THRESHOLD) {
@@ -42,7 +43,7 @@ class QuadTree {
 		}
 	}
 
-	remove(object: any) {
+	remove(object: T) {
 		if (this.isLeaf) {
 			const index = this.objects.indexOf(object);
 			if (index !== -1) {
@@ -57,14 +58,14 @@ class QuadTree {
 		}
 	}
 
-	findObjectsInCenteredRect(rectCenterX: number, rectCenterY: number, rectExtentX: number, rectExtentY: number): any[] {
+	findObjectsInCenteredRect(rectCenterX: number, rectCenterY: number, rectExtentX: number, rectExtentY: number): T[] {
 		if (!centeredRectanglesIntersect(
 				rectCenterX, rectCenterY, rectExtentX, rectExtentY,
 				this.centerX, this.centerY, this.extentX, this.extentY)) {
 			return [];
 		}
 
-		let objectsFound: any[] = [];
+		let objectsFound: T[] = [];
 
 		if (this.isLeaf) {
 			for (const object of this.objects) {
@@ -92,7 +93,7 @@ class QuadTree {
 
 		for (const signY of [-1, 1]) {
 			for (const signX of [-1, 1]) {
-				const childNode = new QuadTree(
+				const childNode = new QuadTree<T>(
 					this.centerX + signX * halfExtentX,
 					this.centerY + signY * halfExtentY,
 					halfExtentX, halfExtentY, this.depth + 1);
@@ -142,13 +143,11 @@ class QuadTree {
 	}
 }
 
-
 function centeredRectangleContainsPoint(
 		rectCenterX: number, rectCenterY: number, rectExtentX: number, rectExtentY: number, pointX: number, pointY: number): boolean {
 	return (Math.abs(pointX - rectCenterX) < rectExtentX)
 		&& (Math.abs(pointY - rectCenterY) < rectExtentY);
 }
-
 
 function centeredRectanglesIntersect(
 		rect1CenterX: number, rect1CenterY: number, rect1ExtentX: number, rect1ExtentY: number,
@@ -156,6 +155,3 @@ function centeredRectanglesIntersect(
 	return (Math.abs(rect1CenterX - rect2CenterX) < rect1ExtentX + rect2ExtentX)
 		&& (Math.abs(rect1CenterY - rect2CenterY) < rect1ExtentY + rect2ExtentY);
 }
-
-
-export {QuadTree};

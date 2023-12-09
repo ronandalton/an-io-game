@@ -1,3 +1,4 @@
+import { CircularObject } from './CircularObject';
 import { QuadTree } from './QuadTree'
 
 
@@ -16,9 +17,9 @@ import { QuadTree } from './QuadTree'
  * implementation should be able to handle points that aren't within the bounds or
  * right on the edge of the bounds.
  */
-class CircularObjectMap {
-	private _objects: Map<number, any>; // key: id
-	private _quadTree: QuadTree;
+export class CircularObjectMap<T extends CircularObject> {
+	private _objects: Map<number, T>; // key: id
+	private _quadTree: QuadTree<T>;
 
 	/**
 	 * Constructs a new CircularObjectMap.
@@ -46,7 +47,7 @@ class CircularObjectMap {
 	 *
 	 * @param object A circular object that defines x, y, radius and id.
 	 */
-	add(object: any) {
+	add(object: T) {
 		this.remove(object.id);
 
 		const objectCopy = object.clone();
@@ -62,8 +63,9 @@ class CircularObjectMap {
 	 * @param id The id of the object to remove.
 	 */
 	remove(id: number) {
-		if (this._objects.has(id)) {
-			this._quadTree.remove(this._objects.get(id));
+		const object = this._objects.get(id);
+		if (object !== undefined) {
+			this._quadTree.remove(object);
 			this._objects.delete(id);
 		}
 	}
@@ -74,8 +76,8 @@ class CircularObjectMap {
 	 * @param id This id of the object to get.
 	 * @returns A copy of the object if found, otherwise null.
 	 */
-	get(id: number): any | null {
-		return this._objects.has(id) ? this._objects.get(id).clone() : null;
+	get(id: number): T | null {
+		return this._objects.get(id)?.clone() ?? null;
 	}
 
 	/**
@@ -83,7 +85,7 @@ class CircularObjectMap {
 	 * 
 	 * @returns A list of copies of all the objects stored in the collection.
 	 */
-	getAll(): any[] {
+	getAll(): T[] {
 		return Array.from(this._objects.values()).map((object) => (object.clone()));
 	}
 
@@ -97,10 +99,10 @@ class CircularObjectMap {
 	 * This object doesn't have to be in the collection.
 	 * @return A list of objects in the collection which intersect the given object.
 	 */
-	findSmallerObjectsIntersecting(object: any): any[] {
-		const objectsFound = [];
+	findSmallerObjectsIntersecting(object: CircularObject): T[] {
+		const objectsFound: T[] = [];
 
-		const candidates = this._quadTree.findObjectsInCenteredRect(
+		const candidates: T[] = this._quadTree.findObjectsInCenteredRect(
 			object.x, object.y, object.radius * 2, object.radius * 2);
 
 		for (const candidate of candidates) {
@@ -127,6 +129,3 @@ function circlesIntersect(x1: number, y1: number, r1: number, x2: number, y2: nu
 
 	return distance < r1 + r2;
 }
-
-
-export {CircularObjectMap};

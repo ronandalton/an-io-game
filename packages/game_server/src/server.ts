@@ -20,8 +20,8 @@ let websocketServer: WebSocketServer | null = null;
 const clientStates: Map<number, ClientState> = new Map(); // key: clientId (all client data except player specific data)
 const availablePlayerIds: number[] = [];
 const players: Map<number, Player> = new Map(); // key: playerId
-const cells: CircularObjectMap = new CircularObjectMap(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
-const foodParticles: CircularObjectMap = new CircularObjectMap(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
+const cells: CircularObjectMap<Cell> = new CircularObjectMap<Cell>(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
+const foodParticles: CircularObjectMap<FoodParticle> = new CircularObjectMap<FoodParticle>(0, 0, PLAY_AREA_WIDTH, PLAY_AREA_HEIGHT);
 
 for (let i = MAX_PLAYERS - 1; i >= 0; i--) {
 	availablePlayerIds.push(i);
@@ -204,6 +204,10 @@ function updateGameState(): void {
 	for (const player of players.values()) {
 		const playerCell = cells.get(player.cellId);
 
+		if (playerCell === null) {
+			throw new Error("Cell not found");
+		}
+
 		if (player.targetPosition !== null) {
 			moveCellTowardsTargetPosition(playerCell, player.targetPosition, CELL_MOVEMENT_SPEED);
 		}
@@ -256,6 +260,11 @@ function updateCameraForClient(clientState: ClientState): void {
 		}
 
 		const cell = cells.get(player.cellId);
+
+		if (cell === null) {
+			throw new Error("Cell not found");
+		}
+
 		clientState.camera.position = cell.position.clone();
 	}
 }

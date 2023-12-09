@@ -1,7 +1,8 @@
+import { CircularObject } from './CircularObject';
 import { Position } from './Position';
 import { MASS_TO_AREA_MULTIPLIER } from './constants';
 
-export class Cell {
+export class Cell implements CircularObject {
     id: number;
     position: Position;
     mass: number;
@@ -24,7 +25,7 @@ export class Cell {
         return Math.sqrt(this.mass * MASS_TO_AREA_MULTIPLIER / Math.PI);
     }
 
-    clone(): Cell {
-        return new Cell(this.id, this.position.clone(), this.mass);
+    clone(): this {
+        return new Cell(this.id, this.position.clone(), this.mass) as this;
     }
 }

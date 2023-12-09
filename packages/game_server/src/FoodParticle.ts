@@ -1,7 +1,8 @@
+import { CircularObject } from './CircularObject';
 import { Position } from './Position';
 import { FOOD_RADIUS } from './constants';
 
-export class FoodParticle {
+export class FoodParticle implements CircularObject {
     id: number;
     position: Position;
     hue: number; // 0-255 value representing color
@@ -24,7 +25,7 @@ export class FoodParticle {
         return FOOD_RADIUS;
     }
 
-    clone(): FoodParticle {
-        return new FoodParticle(this.id, this.position.clone(), this.hue);
+    clone(): this {
+        return new FoodParticle(this.id, this.position.clone(), this.hue) as this;
     }
 }
