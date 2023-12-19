@@ -1,5 +1,7 @@
 import { Position } from './Position';
 
+export type PlayerId = number;
+
 export class Player {
     id: number;
     cellId: number;

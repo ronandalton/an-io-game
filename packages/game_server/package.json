@@ -2,10 +2,10 @@
   "name": "@ronandalton/an-io-game-game-server",
   "version": "0.0.1",
   "description": "The Websocket game server for an-io-game",
-  "main": "src/server.ts",
+  "main": "src/index.ts",
   "scripts": {
     "build": "tsc --build",
-    "start": "tsx src/server.ts",
+    "start": "tsx src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
