@@ -1,5 +1,5 @@
 import { RawData, WebSocket, WebSocketServer } from "ws";
-import { GameUpdateMessage, JoinGameRequestMessage, JoinGameResponseMessage, TargetPositionUpdateMessage } from "./messages";
+import { ClientMessage, GameUpdateMessage, JoinGameRequestMessage, JoinGameResponseMessage, TargetPositionUpdateMessage, isJoinGameRequestMessage, isTargetPositionUpdateMessage } from "./messages";
 import { ClientManager } from "./ClientManager";
 import { Game } from "./Game";
 import { ClientId } from "./Client";
@@ -37,17 +37,14 @@ export class CommunicationManager {
 
 	private handleWebsocketMessage(connection: WebSocket, data: RawData): void {
 		try {
-			const message = JSON.parse(data.toString());
+			const message: ClientMessage = JSON.parse(data.toString());
 
-			switch (message.type) {
-				case "joinGameRequest":
-					this.handleJoinGameRequestMessage(connection, message);
-					break;
-				case "targetPositionUpdate":
-					this.handleTargetPositionUpdateMessage(connection, message);
-					break;
-				default:
-					throw new Error("Unknown message type received")
+			if (isJoinGameRequestMessage(message)) {
+				this.handleJoinGameRequestMessage(connection, message);
+			} else if (isTargetPositionUpdateMessage(message)) {
+				this.handleTargetPositionUpdateMessage(connection, message);
+			} else {
+				throw new Error("Unknown message type received")
 			}
 		} catch (error) {
 			console.log(error);
