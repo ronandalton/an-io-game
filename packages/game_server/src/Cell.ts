@@ -1,13 +1,15 @@
-import { CircularObject } from './CircularObject';
+import { CircularObject, CircularObjectId } from './CircularObject';
 import { Position } from './Position';
 import { MASS_TO_AREA_MULTIPLIER } from './constants';
 
+export type CellId = CircularObjectId;
+
 export class Cell implements CircularObject {
-    id: number;
+    id: CellId;
     position: Position;
     mass: number;
 
-    constructor(id: number, position: Position, mass: number) {
+    constructor(id: CellId, position: Position, mass: number) {
         this.id = id;
         this.position = position;
         this.mass = mass;

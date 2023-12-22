@@ -1,3 +1,5 @@
+export type Id = number;
+
 export interface Identifiable {
-	id: number;
+	id: Id;
 }

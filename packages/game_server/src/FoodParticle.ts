@@ -1,13 +1,15 @@
-import { CircularObject } from './CircularObject';
+import { CircularObject, CircularObjectId } from './CircularObject';
 import { Position } from './Position';
 import { FOOD_RADIUS } from './constants';
 
+export type FoodParticleId = CircularObjectId;
+
 export class FoodParticle implements CircularObject {
-    id: number;
+    id: FoodParticleId;
     position: Position;
     hue: number; // 0-255 value representing color
 
-    constructor(id: number, position: Position, hue: number) {
+    constructor(id: FoodParticleId, position: Position, hue: number) {
         this.id = id;
         this.position = position;
         this.hue = hue;

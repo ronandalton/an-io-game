@@ -1,8 +1,9 @@
+import { GameObjectId } from './GameObject';
 import { Position } from './Position';
 import { PLAY_AREA_WIDTH } from './constants';
 import { PLAY_AREA_HEIGHT } from './constants';
 
-export function generateGameObjectId(): number {
+export function generateGameObjectId(): GameObjectId {
 	return getRandomInt(0, 2 ** 32);
 }
 

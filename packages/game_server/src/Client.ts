@@ -5,12 +5,12 @@ import { PlayerId } from './Player';
 export type ClientId = number;
 
 export class Client {
-    clientId: ClientId;
+    id: ClientId;
     camera: Camera;
     playerId: PlayerId | null;
 
-    constructor(clientId: ClientId) {
-        this.clientId = clientId;
+    constructor(id: ClientId) {
+        this.id = id;
         this.camera = new Camera();
         this.playerId = null;
     }

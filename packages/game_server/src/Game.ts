@@ -11,7 +11,7 @@ export class Game {
 	cells: CircularObjectMap<Cell>;
 	foodParticles: CircularObjectMap<FoodParticle>;
 
-	private availablePlayerIds: number[];
+	private availablePlayerIds: PlayerId[];
 
 	constructor() {
 		this.players = new Map();
@@ -99,7 +99,7 @@ export class Game {
 		cell.position.y += dyNorm * moveDistance;
 	}
 
-	private getUnusedPlayerId(): number | null {
+	private getUnusedPlayerId(): PlayerId | null {
 		return this.availablePlayerIds.pop() ?? null;
 	}
 }

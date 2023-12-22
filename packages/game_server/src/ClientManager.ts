@@ -28,7 +28,7 @@ export class ClientManager {
 		}
 	}
 
-    private static generateClientId(): number {
+    private static generateClientId(): ClientId {
         return getRandomInt(0, 2 ** 32);
     }
 }
