@@ -18,8 +18,8 @@ import { QuadTree } from './QuadTree'
  * right on the edge of the bounds.
  */
 export class CircularObjectMap<T extends CircularObject> {
-	private _objects: Map<number, T>; // key: id
-	private _quadTree: QuadTree<T>;
+	private objects: Map<number, T>; // key: id
+	private quadTree: QuadTree<T>;
 
 	/**
 	 * Constructs a new CircularObjectMap.
@@ -36,8 +36,8 @@ export class CircularObjectMap<T extends CircularObject> {
 		const extentX = width / 2;
 		const extentY = height / 2;
 
-		this._objects = new Map();
-		this._quadTree = new QuadTree(centerX, centerY, extentX, extentY);
+		this.objects = new Map();
+		this.quadTree = new QuadTree(centerX, centerY, extentX, extentY);
 	}
 
 	/**
@@ -52,8 +52,8 @@ export class CircularObjectMap<T extends CircularObject> {
 
 		const objectCopy = object.clone();
 
-		this._objects.set(object.id, objectCopy);
-		this._quadTree.insert(objectCopy);
+		this.objects.set(object.id, objectCopy);
+		this.quadTree.insert(objectCopy);
 	}
 
 	/**
@@ -63,10 +63,10 @@ export class CircularObjectMap<T extends CircularObject> {
 	 * @param id The id of the object to remove.
 	 */
 	remove(id: number) {
-		const object = this._objects.get(id);
+		const object = this.objects.get(id);
 		if (object !== undefined) {
-			this._quadTree.remove(object);
-			this._objects.delete(id);
+			this.quadTree.remove(object);
+			this.objects.delete(id);
 		}
 	}
 
@@ -77,7 +77,7 @@ export class CircularObjectMap<T extends CircularObject> {
 	 * @returns A copy of the object if found, otherwise null.
 	 */
 	get(id: number): T | null {
-		return this._objects.get(id)?.clone() ?? null;
+		return this.objects.get(id)?.clone() ?? null;
 	}
 
 	/**
@@ -86,7 +86,7 @@ export class CircularObjectMap<T extends CircularObject> {
 	 * @returns A list of copies of all the objects stored in the collection.
 	 */
 	getAll(): T[] {
-		return Array.from(this._objects.values()).map((object) => (object.clone()));
+		return Array.from(this.objects.values()).map((object) => (object.clone()));
 	}
 
 	/**
@@ -102,7 +102,7 @@ export class CircularObjectMap<T extends CircularObject> {
 	findSmallerObjectsIntersecting(object: CircularObject): T[] {
 		const objectsFound: T[] = [];
 
-		const candidates: T[] = this._quadTree.findObjectsInCenteredRect(
+		const candidates: T[] = this.quadTree.findObjectsInCenteredRect(
 			object.x, object.y, object.radius * 2, object.radius * 2);
 
 		for (const candidate of candidates) {
